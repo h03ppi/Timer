@@ -1,0 +1,14 @@
+package de.h03ppi.timer.timer;
+
+import org.bukkit.command.*;
+import java.util.*;
+
+public class TimerCommandCompleter implements TabCompleter
+{
+    public List<String> onTabComplete(final CommandSender sender, final Command arg1, final String arg2, final String[] args) {
+        if (args.length == 1) {
+            return Arrays.asList("resume", "pause", "reset", "set", "reverse", "get");
+        }
+        return null;
+    }
+}
