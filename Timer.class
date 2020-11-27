@@ -1,0 +1,218 @@
+package de.h03ppi.timer.timeri;
+
+import org.bukkit.configuration.file.*;
+import org.bukkit.*;
+import org.bukkit.plugin.*;
+import java.io.*;
+import org.bukkit.entity.*;
+import net.md_5.bungee.api.*;
+import net.md_5.bungee.api.chat.*;
+import java.util.*;
+
+public class Timer
+{
+    static int taskId;
+    public static boolean isRunning;
+    public static boolean reverse;
+    public static int days;
+    public static int hours;
+    public static int minutes;
+    public static int seconds;
+    
+    public static void loadTimer() {
+        final YamlConfiguration cfg = YamlConfiguration.loadConfiguration(Main.getTimerFile());
+        Timer.days = cfg.getInt("days");
+        Timer.hours = cfg.getInt("hours");
+        Timer.minutes = cfg.getInt("minutes");
+        Timer.seconds = cfg.getInt("seconds");
+        Timer.reverse = cfg.getBoolean("reverse");
+    }
+    
+    public static void resumeTimer() {
+        if (Timer.isRunning) {
+            return;
+        }
+        Timer.isRunning = true;
+        Main.stopIdle();
+        Timer.taskId = Bukkit.getScheduler().scheduleAsyncRepeatingTask((Plugin)Main.getInstance(), (Runnable)new Runnable() {
+            @Override
+            public void run() {
+                ++Timer.seconds;
+                if (Timer.seconds == 60) {
+                    Timer.seconds = 0;
+                    ++Timer.minutes;
+                }
+                if (Timer.minutes == 60) {
+                    Timer.minutes = 0;
+                    ++Timer.hours;
+                }
+                if (Timer.hours == 24) {
+                    Timer.hours = 0;
+                    ++Timer.days;
+                }
+                sendTimer();
+            }
+        }, 0L, 20L);
+    }
+    
+    public static void stopTimer() {
+        if (!Timer.isRunning) {
+            return;
+        }
+        Main.startIdle();
+        Bukkit.getScheduler().cancelTask(Timer.taskId);
+        Timer.isRunning = false;
+        saveTimer();
+    }
+    
+    public static void resetTimer() {
+        if (Timer.isRunning) {
+            stopTimer();
+            Timer.isRunning = false;
+        }
+        final YamlConfiguration cfg = YamlConfiguration.loadConfiguration(Main.getTimerFile());
+        Timer.days = 0;
+        Timer.hours = 0;
+        Timer.minutes = 0;
+        Timer.seconds = 0;
+        cfg.set("days", (Object)Timer.days);
+        cfg.set("hours", (Object)Timer.hours);
+        cfg.set("minutes", (Object)Timer.minutes);
+        cfg.set("seconds", (Object)Timer.seconds);
+        try {
+            cfg.save(Main.getTimerFile());
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public static void saveTimer() {
+        final YamlConfiguration cfg = YamlConfiguration.loadConfiguration(Main.getTimerFile());
+        cfg.set("days", (Object)Timer.days);
+        cfg.set("hours", (Object)Timer.hours);
+        cfg.set("minutes", (Object)Timer.minutes);
+        cfg.set("seconds", (Object)Timer.seconds);
+        try {
+            cfg.save(Main.getTimerFile());
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public static void resumeReverseTimer(final int days, final int hours, final int minutes, final int seconds) {
+        if (Timer.isRunning) {
+            return;
+        }
+        Timer.isRunning = true;
+        Main.stopIdle();
+        formatTime(days, hours, minutes, seconds);
+        Timer.taskId = Bukkit.getScheduler().scheduleAsyncRepeatingTask((Plugin)Main.getInstance(), (Runnable)new Runnable() {
+            @Override
+            public void run() {
+                if (Timer.seconds <= 1 && Timer.minutes > -1) {
+                    Timer.seconds = 60;
+                    --Timer.minutes;
+                }
+                if (Timer.minutes == -1 && Timer.hours > -1) {
+                    Timer.minutes = 59;
+                    --Timer.hours;
+                }
+                if (Timer.hours == -1 && Timer.days > -1) {
+                    Timer.hours = 23;
+                    --Timer.days;
+                }
+                if (Timer.days < 0) {
+                    Bukkit.broadcastMessage(String.valueOf(Main.getPrefix()) + Main.getMessages().get(7));
+                    Timer.resetTimer();
+                    return;
+                }
+                --Timer.seconds;
+                sendTimer();
+            }
+        }, 0L, 20L);
+    }
+    
+    public static void sendActionbar(final Player player, final String text) {
+        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, (BaseComponent)new TextComponent(text));
+    }
+    
+    private static void sendTimer() {
+        String daysString = new StringBuilder().append(Timer.days).toString();
+        String hoursString = new StringBuilder().append(Timer.hours).toString();
+        String minutesString = new StringBuilder().append(Timer.minutes).toString();
+        String secondsString = new StringBuilder().append(Timer.seconds).toString();
+        if (Timer.seconds < 10) {
+            secondsString = "0" + Timer.seconds;
+        }
+        if (Timer.minutes < 10) {
+            minutesString = "0" + Timer.minutes;
+        }
+        if (Timer.hours < 10) {
+            hoursString = "0" + Timer.hours;
+        }
+        if (Timer.days < 10) {
+            daysString = "0" + Timer.days;
+        }
+        final String timer = Main.getMessages().get(5).replace("%d%", daysString).replace("%h%", hoursString).replace("%m%", minutesString).replace("%s%", secondsString);
+        for (final Player p : Bukkit.getOnlinePlayers()) {
+            sendActionbar(p, timer);
+        }
+    }
+    
+    public static String getTimerAsString() {
+        String hoursString = new StringBuilder().append(Timer.hours).toString();
+        String minutesString = new StringBuilder().append(Timer.minutes).toString();
+        String secondsString = new StringBuilder().append(Timer.seconds).toString();
+        if (Timer.seconds < 10) {
+            secondsString = "0" + Timer.seconds;
+        }
+        if (Timer.minutes < 10) {
+            minutesString = "0" + Timer.minutes;
+        }
+        if (Timer.hours < 10) {
+            hoursString = "0" + Timer.hours;
+        }
+        return String.valueOf(hoursString) + ":" + minutesString + ":" + secondsString;
+    }
+    
+    public static void formatTime(final int days, final int hours, final int minutes, final int seconds) {
+        Timer.days = days;
+        Timer.hours = hours;
+        Timer.minutes = minutes;
+        Timer.seconds = seconds;
+        if (Timer.seconds / 60 >= 1) {
+            Timer.minutes = Timer.seconds / 60;
+            Timer.seconds %= 60;
+        }
+        if (Timer.minutes / 60 >= 1) {
+            Timer.hours = Timer.minutes / 60;
+            Timer.minutes %= 60;
+        }
+        if (Timer.hours / 24 >= 1) {
+            Timer.days = Timer.hours / 24;
+            Timer.hours %= 24;
+        }
+    }
+    
+    public static boolean isReverse() {
+        return Timer.reverse;
+    }
+    
+    public static void setReverse(final boolean reverse) {
+        Timer.reverse = reverse;
+        final YamlConfiguration cfg = YamlConfiguration.loadConfiguration(Main.getTimerFile());
+        cfg.set("reverse", (Object)reverse);
+        try {
+            cfg.save(Main.getTimerFile());
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    static {
+        Timer.isRunning = false;
+    }
+}
