@@ -1,0 +1,97 @@
+package de.h03ppi.timer.timeri;
+
+import org.bukkit.plugin.java.*;
+import java.io.*;
+import de.h03ppi.timer.timer.*;
+import org.bukkit.command.*;
+import org.bukkit.*;
+import org.bukkit.entity.*;
+import java.util.*;
+import org.bukkit.plugin.*;
+
+public class Main extends JavaPlugin
+{
+    static int taskId;
+    private static Main instance;
+    private static File timerFile;
+    private static String prefix;
+    private static ArrayList<String> messages;
+    private String bukkitVersion;
+    private String download;
+    
+    public Main() {
+        this.bukkitVersion = "1.8.8-R0.1-SNAPSHOT";
+        this.download = "https://cdn.getbukkit.org/craftbukkit/craftbukkit-1.8.8-R0.1-SNAPSHOT-latest.jar";
+    }
+    
+    public void onEnable() {
+        (Main.instance = this).loadTimer();
+        this.getCommand("timer").setExecutor((CommandExecutor)new TimerCommand());
+        this.getCommand("timer").setTabCompleter((TabCompleter)new TimerCommandCompleter());
+        startIdle();
+        Bukkit.getConsoleSender().sendMessage("§6" + this.getDescription().getName() + " Version " + this.getDescription().getVersion());
+        Bukkit.getConsoleSender().sendMessage("§6Bitte verwende mindestens Spigot 1.13");
+        Bukkit.getConsoleSender().sendMessage("§4The TimerPlugin is loaded!");
+    }
+    
+    public void onDisable() {
+        Timer.saveTimer();
+        Bukkit.getConsoleSender().sendMessage("§6" + this.getDescription().getName() + " Version " + this.getDescription().getVersion());
+        Bukkit.getConsoleSender().sendMessage("§4The TimerPlugin is unloaded!");
+    }
+    
+    private void loadTimer() {
+        Main.timerFile = new File(this.getDataFolder(), "timer.yml");
+        if (!Main.timerFile.exists()) {
+            this.saveResource("timer.yml", true);
+        }
+        this.getConfig().options().copyDefaults(true);
+        this.saveDefaultConfig();
+        Timer.loadTimer();
+        Main.prefix = String.valueOf(this.getConfig().getString("prefix").replace("&", "§")) + " §r";
+        (Main.messages = new ArrayList<String>()).add(this.getConfig().getString("resume").replace("&", "§"));
+        Main.messages.add(this.getConfig().getString("pause").replace("&", "§"));
+        Main.messages.add(this.getConfig().getString("reset").replace("&", "§"));
+        Main.messages.add(this.getConfig().getString("running").replace("&", "§"));
+        Main.messages.add(this.getConfig().getString("not_running").replace("&", "§"));
+        Main.messages.add(this.getConfig().getString("actionbar").replace("&", "§"));
+        Main.messages.add(this.getConfig().getString("paused").replace("&", "§"));
+        Main.messages.add(this.getConfig().getString("over").replace("&", "§"));
+        Main.messages.add(this.getConfig().getString("remain_time").replace("&", "§"));
+        Main.messages.add(this.getConfig().getString("reverse").replace("&", "§"));
+        Main.messages.add(this.getConfig().getString("unreverse").replace("&", "§"));
+        Main.messages.add(this.getConfig().getString("set").replace("&", "§"));
+        Main.messages.add(this.getConfig().getString("get").replace("&", "§"));
+    }
+    
+    public static String getPrefix() {
+        return Main.prefix;
+    }
+    
+    public static ArrayList<String> getMessages() {
+        return Main.messages;
+    }
+    
+    public static Main getInstance() {
+        return Main.instance;
+    }
+    
+    public static File getTimerFile() {
+        return Main.timerFile;
+    }
+    
+    public static void startIdle() {
+        Main.taskId = Bukkit.getScheduler().scheduleAsyncRepeatingTask((Plugin)Main.instance, (Runnable)new Runnable() {
+            @Override
+            public void run() {
+                for (final Player p : Bukkit.getOnlinePlayers()) {
+                    Timer.sendActionbar(p, Main.messages.get(6));
+                }
+            }
+        }, 0L, 40L);
+    }
+    
+    public static void stopIdle() {
+        Bukkit.getScheduler().cancelTask(Main.taskId);
+    }
+}
