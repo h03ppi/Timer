@@ -1,0 +1,114 @@
+package de.h03ppi.timer.timer;
+
+import org.bukkit.command.*;
+import org.bukkit.entity.*;
+import de.h03ppi.timer.timeri.*;
+
+public class TimerCommand implements CommandExecutor
+{
+    public boolean onCommand(final CommandSender sender, final Command arg1, final String arg2, final String[] args) {
+        final String syntax = String.valueOf(Main.getPrefix()) + "§cBitte nutze /timer <resume/pause/reset/set/get/reverse>";
+        if (args.length == 0) {
+            if (sender instanceof Player) {
+                final Player p = (Player)sender;
+                p.sendMessage(String.valueOf(Main.getPrefix()) + "§7Der Timer is gut §5:D");
+                p.sendMessage(String.valueOf(Main.getPrefix()) + "§7Benutze §6/timer help!");
+            }
+            else {
+                sender.sendMessage(syntax);
+            }
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("resume")) {
+            if (Timer.isRunning) {
+                sender.sendMessage(String.valueOf(Main.getPrefix()) + Main.getMessages().get(3));
+                return true;
+            }
+            if (!Timer.isReverse()) {
+                Timer.resumeTimer();
+            }
+            else {
+                Timer.resumeReverseTimer(Timer.days, Timer.hours, Timer.minutes, Timer.seconds);
+            }
+            sender.sendMessage(String.valueOf(Main.getPrefix()) + Main.getMessages().get(0));
+            return true;
+        }
+        else if (args[0].equalsIgnoreCase("pause")) {
+            if (!Timer.isRunning) {
+                sender.sendMessage(String.valueOf(Main.getPrefix()) + Main.getMessages().get(4));
+                return true;
+            }
+            Timer.stopTimer();
+            sender.sendMessage(String.valueOf(Main.getPrefix()) + Main.getMessages().get(1));
+            return true;
+        }
+        else {
+            if (args[0].equalsIgnoreCase("reset")) {
+                Timer.resetTimer();
+                sender.sendMessage(String.valueOf(Main.getPrefix()) + Main.getMessages().get(2));
+                return true;
+            }
+            if (args[0].equalsIgnoreCase("reverse")) {
+                if (Timer.isReverse()) {
+                    sender.sendMessage(String.valueOf(Main.getPrefix()) + Main.getMessages().get(10));
+                    if (Timer.isRunning) {
+                        Timer.stopTimer();
+                        Timer.resumeTimer();
+                    }
+                    Timer.setReverse(false);
+                }
+                else {
+                    sender.sendMessage(String.valueOf(Main.getPrefix()) + Main.getMessages().get(9));
+                    Timer.setReverse(true);
+                    if (Timer.isRunning) {
+                        Timer.stopTimer();
+                        Timer.resumeReverseTimer(Timer.days, Timer.hours, Timer.minutes, Timer.seconds);
+                    }
+                }
+                return true;
+            }
+            if (args[0].equalsIgnoreCase("set")) {
+                if (args.length == 1) {
+                    sender.sendMessage(String.valueOf(Main.getPrefix()) + "§cBitte nutze /timer set <Tage> <Stunden> <Minuten> <Sekunden>");
+                    return true;
+                }
+                int days;
+                int hours;
+                int minutes;
+                int seconds;
+                try {
+                    days = Integer.parseInt(args[1]);
+                    hours = Integer.parseInt(args[2]);
+                    minutes = Integer.parseInt(args[3]);
+                    seconds = Integer.parseInt(args[4]);
+                }
+                catch (Exception e) {
+                    sender.sendMessage(String.valueOf(Main.getPrefix()) + "§cBitte gebe g\u00fcltige Zahlen ein!");
+                    return true;
+                }
+                Timer.formatTime(Timer.days = days, Timer.hours = hours, Timer.minutes = minutes, Timer.seconds = seconds);
+                Timer.saveTimer();
+                sender.sendMessage(String.valueOf(Main.getPrefix()) + Main.getMessages().get(11).replace("%t%", Timer.getTimerAsString()));
+                return true;
+            }
+            else {
+                if (args[0].equalsIgnoreCase("get")) {
+                    sender.sendMessage(String.valueOf(Main.getPrefix()) + Main.getMessages().get(12).replace("%t%", Timer.getTimerAsString()));
+                    return true;
+                }
+                if (args[0].equalsIgnoreCase("help")) {
+                    sender.sendMessage(String.valueOf(Main.getPrefix()) + "§c~~~~~ §6Timer command §c~~~~~");
+                    sender.sendMessage(String.valueOf(Main.getPrefix()) + "§c/timer resume §4- §6Setze den Timer fort");
+                    sender.sendMessage(String.valueOf(Main.getPrefix()) + "§c/timer pause §4- §6Pausiere den Timer");
+                    sender.sendMessage(String.valueOf(Main.getPrefix()) + "§c/timer reset §4- §6Setze den Timer zur\u00fcck");
+                    sender.sendMessage(String.valueOf(Main.getPrefix()) + "§c/timer set [Zeit] §4- §6Setze den Timer auf eine bestimmte Zeit");
+                    sender.sendMessage(String.valueOf(Main.getPrefix()) + "§c/timer get §4- §6Gibt die Zeit des Timers aus");
+                    sender.sendMessage(String.valueOf(Main.getPrefix()) + "§c/timer reverse §4- §6\u00c4ndere ob der Timer vor- oder r\u00fcckw\u00e4rts l\u00e4uft");
+                    return true;
+                }
+                sender.sendMessage(syntax);
+                return true;
+            }
+        }
+    }
+}
